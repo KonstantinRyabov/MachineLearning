@@ -1,7 +1,8 @@
-
+import torch
 from torch import nn
-class HeadAttention(nn.Module):
-        def __init__(self, num_heads, emb_size, head_size, max_seq_len, dropout):
+from masked_head_attention import HeadAttention 
+class MultiHeadAttention(nn.Module):
+        def __init__(self, num_heads, emb_size, head_size, max_seq_len, dropout = 0.1):
             super().__init__()
             self.num_heads = num_heads
             self.emb_size = emb_size
@@ -10,17 +11,13 @@ class HeadAttention(nn.Module):
             self.dropout = dropout
             
             self.headatt = nn.ModuleList([HeadAttention(emb_size, head_size, max_seq_len) for i in range(num_heads)])
-            self.linear  = nn.Linear(head_size, num_heads, emb_size)
+            self.linear  = nn.Linear(head_size*num_heads, emb_size)
             self.drop = nn.Dropout(dropout)
 
 
         def forward(self, x):
             batch_size, seq_len, emb_size = x.size()
-            layers = ()
-            for i, l in enumerate(self.headatt):
-                layers.append(self.headatt[i](x))
-            concat_rs = nn.cat(layers, 0)
-            lin_rs = self.linear(concat_rs)
+            output = torch.cat([head(x) for head in self.headatt], dim=-1) 
+            lin_rs = self.linear(output)
             drop_rs = self.drop(lin_rs)
             return drop_rs
-            
